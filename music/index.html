@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telegram MP3 Player</title>
+  <meta name="description" content="基于 Telegram 存储的 MP3 播放工具">
+  <link rel="icon" href="/logo.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>Telegram MP3 Player</h1>
+        <p class="subtitle">上传、检索、流式播放</p>
+      </div>
+      <div class="auth-box">
+        <input id="authCodeInput" type="password" placeholder="输入访问码 authCode">
+        <button id="loginButton" type="button">登录</button>
+        <button id="logoutButton" type="button" class="ghost">退出</button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <input id="searchInput" type="text" placeholder="搜索歌曲名（支持回车）">
+      <select id="sortSelect">
+        <option value="timeDesc">最新上传</option>
+        <option value="timeAsc">最早上传</option>
+        <option value="nameAsc">名称 A-Z</option>
+        <option value="nameDesc">名称 Z-A</option>
+        <option value="sizeAsc">体积小到大</option>
+        <option value="sizeDesc">体积大到小</option>
+      </select>
+      <button id="refreshButton" type="button">刷新</button>
+      <label class="upload-label" for="uploadInput">上传 MP3/M4A</label>
+      <input id="uploadInput" type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4">
+    </section>
+
+    <p id="statusText" class="status" aria-live="polite">请先登录后加载音乐库。</p>
+
+    <section class="library">
+      <ul id="trackList" class="track-list"></ul>
+      <div id="emptyState" class="empty hidden">暂无歌曲，请先上传。</div>
+    </section>
+  </div>
+
+  <footer class="player-panel">
+    <div class="track-meta">
+      <p id="nowPlayingTitle" class="title">未播放</p>
+      <p id="nowPlayingSub" class="sub">请选择一首歌</p>
+    </div>
+
+    <div class="player-controls">
+      <button id="prevButton" type="button">上一首</button>
+      <button id="playPauseButton" type="button">播放</button>
+      <button id="nextButton" type="button">下一首</button>
+    </div>
+
+    <div class="progress-row">
+      <span id="currentTime">00:00</span>
+      <input id="progressInput" type="range" min="0" max="1000" value="0" step="1">
+      <span id="totalTime">00:00</span>
+    </div>
+
+    <audio id="audioPlayer" preload="metadata"></audio>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
+

@@ -14,6 +14,24 @@ export class TelegramAPI {
         };
     }
 
+    async parseApiError(response) {
+        let payload = null;
+        try {
+            payload = await response.clone().json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        const error = new Error(payload?.description || `Telegram API error: ${response.status} ${response.statusText}`);
+        error.status = response.status;
+        error.code = payload?.error_code || response.status;
+        if (payload?.parameters?.retry_after) {
+            error.retryAfterSeconds = payload.parameters.retry_after;
+        }
+        error.payload = payload;
+        return error;
+    }
+
     /**
      * 发送文件到Telegram
      * @param {File} file - 要发送的文件
@@ -42,13 +60,49 @@ export class TelegramAPI {
         });
         console.log('Telegram API response:', response.status, response.statusText);
         if (!response.ok) {
-            throw new Error(`Telegram API error: ${response.statusText}`);
+            throw await this.parseApiError(response);
         }
 
         // 解析响应数据
         const responseData = await response.json();
 
         return responseData;
+    }
+
+    /**
+     * 发送媒体组（相册）
+     * @param {Array<{attachName: string, file: File|Blob, fileName?: string}>} attachments
+     * @param {Array<Object>} mediaItems
+     * @param {string|number} chatId
+     * @returns {Promise<Object>}
+     */
+    async sendMediaGroup(attachments, mediaItems, chatId) {
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('media', JSON.stringify(mediaItems));
+
+        for (const attachment of attachments) {
+            if (!attachment?.attachName || !attachment?.file) {
+                continue;
+            }
+            if (attachment.fileName) {
+                formData.append(attachment.attachName, attachment.file, attachment.fileName);
+            } else {
+                formData.append(attachment.attachName, attachment.file);
+            }
+        }
+
+        const response = await fetch(`${this.baseURL}/sendMediaGroup`, {
+            method: 'POST',
+            headers: this.defaultHeaders,
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw await this.parseApiError(response);
+        }
+
+        return await response.json();
     }
 
     /**
@@ -93,6 +147,48 @@ export class TelegramAPI {
             console.error('Error parsing Telegram response:', error.message);
             return null;
         }
+    }
+
+    /**
+     * 从 sendMediaGroup 返回中提取文件信息
+     * @param {Object} responseData
+     * @returns {Array<{file_id:string, file_name:string, file_size:number, message_id:number, media_group_id:string|null}>}
+     */
+    getMediaGroupFileInfos(responseData) {
+        if (!responseData?.ok || !Array.isArray(responseData.result)) {
+            return [];
+        }
+
+        const fileInfos = [];
+        for (const message of responseData.result) {
+            let candidate = null;
+
+            if (Array.isArray(message.photo) && message.photo.length > 0) {
+                candidate = message.photo.reduce((prev, current) =>
+                    (prev.file_size > current.file_size) ? prev : current
+                );
+            } else if (message.video) {
+                candidate = message.video;
+            } else if (message.document) {
+                candidate = message.document;
+            } else if (message.audio) {
+                candidate = message.audio;
+            }
+
+            if (!candidate?.file_id) {
+                continue;
+            }
+
+            fileInfos.push({
+                file_id: candidate.file_id,
+                file_name: candidate.file_name || candidate.file_unique_id || null,
+                file_size: candidate.file_size || 0,
+                message_id: message.message_id || null,
+                media_group_id: message.media_group_id || null
+            });
+        }
+
+        return fileInfos;
     }
 
     /**

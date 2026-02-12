@@ -16,6 +16,7 @@
 以下接口会校验上传权限（`upload`）：
 
 - `POST /upload`
+- `POST /api/telegram/media-group-upload`
 - `POST /api/huggingface/getUploadUrl`
 - `POST /api/huggingface/commitUpload`
 - `POST /api/huggingface/batch-upload-commit`
@@ -144,7 +145,80 @@
 | POST | `/api/huggingface/getUploadUrl` | 获取 LFS 预上传信息（直传 S3 所需参数） |
 | POST | `/api/huggingface/commitUpload` | 直传后提交 LFS 引用（单文件） |
 
-## 4.4 HuggingFace 批量上传
+## 4.4 Telegram 媒体组批量上传（Media Group）
+
+### `POST /api/telegram/media-group-upload`
+
+用途：一次请求上传 2~10 个文件到 Telegram 媒体组（相册），服务端逐文件写 metadata，并返回每个文件的可访问 `src`。
+
+请求体：
+
+```json
+{
+  "uploadFolder": "album/2026",
+  "channelName": "TG_main",
+  "requestId": "tg-batch-20260211-001",
+  "files": [
+    {
+      "name": "img-01.jpg",
+      "mimeType": "image/jpeg",
+      "contentBase64": "...",
+      "caption": "可选，仅该媒体条目生效"
+    },
+    {
+      "name": "img-02.jpg",
+      "mimeType": "image/jpeg",
+      "contentBase64": "..."
+    }
+  ]
+}
+```
+
+说明：
+
+- `files` 必须是数组，且数量在 2~10（可由环境变量下调上限）
+- `files[].contentBase64` 支持纯 base64 或 data URL
+- `requestId` 幂等：同请求号重复调用会返回首次结果
+- 媒体组类型约束遵循 Telegram：
+  - `audio/*` 仅可与 `audio/*` 同组
+  - 文档组（非 image/video/audio）仅可与文档同组
+  - 图片/视频可混组
+- 图片中 `gif/webp/svg/ico` 不支持该接口（会返回 `INVALID_REQUEST`）
+
+返回体：
+
+```json
+{
+  "success": true,
+  "requestId": "tg-batch-20260211-001",
+  "channelName": "TG_main",
+  "mediaGroupId": "13625984221712029",
+  "files": [
+    {
+      "name": "img-01.jpg",
+      "src": "/file/album/2026/img-01.jpg",
+      "fullId": "album/2026/img-01.jpg",
+      "messageId": 1234
+    }
+  ]
+}
+```
+
+错误码：
+
+- `INVALID_REQUEST`（400）
+- `AUTH_ERROR`（401）
+- `CHANNEL_NOT_FOUND`（400）
+- `RATE_LIMIT`（429，含 `retryAfterSeconds`）
+- `TELEGRAM_API_ERROR`（502）
+
+可选环境变量（限制批量体积）：
+
+- `TG_MEDIA_GROUP_MAX_FILES`（默认 10，最小 2，最大仍受 Telegram 限制为 10）
+- `TG_MEDIA_GROUP_MAX_SINGLE_FILE_SIZE`（默认 20MB）
+- `TG_MEDIA_GROUP_MAX_TOTAL_SIZE`（默认 80MB）
+
+## 4.5 HuggingFace 批量上传
 
 ### `POST /api/huggingface/batch-upload-commit`
 
@@ -296,8 +370,7 @@
 
 - 该项目有历史兼容负担，接口返回风格并非完全统一。
 - 若你要做 SDK，建议优先封装以下最稳定路径：
-  - 上传：`/upload`、`/api/huggingface/batch-upload-commit`
+  - 上传：`/upload`、`/api/telegram/media-group-upload`、`/api/huggingface/batch-upload-commit`
   - 读取：`/file/{path}`
   - 管理列表：`/api/manage/list`
 - 建议客户端对 429 / 5xx 做指数退避重试，并结合 `requestId` 做幂等。
-
