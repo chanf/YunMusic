@@ -1,158 +1,207 @@
-<div align="center">
-    <a href="https://github.com/MarSeventh/CloudFlare-ImgBed"><img width="80%" alt="logo" src="static/readme/banner.png"/></a>
-    <p><em>🗂️开源文件托管解决方案，支持 Docker 和无服务器部署，支持 Telegram、Discord、Cloudflare R2、S3、Huggingface 等多种存储渠道，支持 WebDAV 协议和多种 RESTful API</em></p>
-    <p>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/blob/main/README.md">简体中文</a> | <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/blob/main/README_en.md">English</a> | <a href="https://cfbed.sanyue.de">官方网站</a>
-    </p>
-    <p align="center">
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/blob/main/LICENSE">
-        <img src="https://img.shields.io/github/license/MarSeventh/CloudFlare-ImgBed" alt="License" />
-        </a>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/releases">
-        <img src="https://img.shields.io/github/release/MarSeventh/CloudFlare-ImgBed" alt="latest version" />
-        </a>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/releases">
-        <img src="https://img.shields.io/github/downloads/MarSeventh/CloudFlare-ImgBed/total?color=%239F7AEA&logo=github" alt="Downloads" />
-        </a>
-        <a href="https://hub.docker.com/r/marseventh/cloudflare-imgbed">
-  		  <img src="https://img.shields.io/docker/pulls/marseventh/cloudflare-imgbed?style=flat-square" alt="Docker Pulls" />
-		</a>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/issues">
-          <img src="https://img.shields.io/github/issues/MarSeventh/CloudFlare-ImgBed" alt="Issues" />
-        </a>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/stargazers">
-          <img src="https://img.shields.io/github/stars/MarSeventh/CloudFlare-ImgBed" alt="Stars" />
-        </a>
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed/network/members">
-          <img src="https://img.shields.io/github/forks/MarSeventh/CloudFlare-ImgBed" alt="Forks" />
-        </a>
-    </P>
-    <p align="center">
-      <a href="https://trendshift.io/repositories/14324" target="_blank">
-        <img src="https://trendshift.io/api/badge/repositories/14324" alt="GitHub Trending" height="80">
-      </a>
-    </p>
-</div>
+# YunMusic
 
+一个基于 **Telegram 作为存储空间** 的自部署 MP3 播放工具。
 
+当前版本聚焦 MVP：
 
-
-
-
+- 上传音频（MP3/M4A）
+- 音乐库检索
+- 网页流式播放（支持 Range/拖拽）
 
 ---
 
-> [!IMPORTANT]
->
-> **v2.0 版本升级注意事项请查看公告！**
+## 1. 项目状态
 
+本仓库已从原“通用文件托管/图床”方向，收敛为“Telegram 音乐播放器”产品形态。
 
+目前可用闭环：
 
-<details>
-    <summary>公告</summary>
+1. 登录（`authCode`）
+2. 加载音乐库
+3. 上传 MP3/M4A
+4. 立即播放、切歌、拖拽进度
 
+默认入口：
 
+- `/` 自动跳转到 `/music/`
 
-## 置顶
+---
 
-1. 部署使用出现问题，请先仔细查阅文档、常见问题解答以及已有issues。
+## 2. 功能概览
 
-2. **注意**：本仓库为[Telegraph-Image](https://github.com/cf-pages/Telegraph-Image)项目的重制版，如果你觉得本项目不错，在支持本项目的同时，也请支持原项目。
+### 2.1 前端（`/music/`）
 
-## 2025.2.6  V2.0 版本升级注意事项
+- 登录态管理（`authCode`）
+- 音乐列表：搜索、排序、刷新
+- 文件上传：仅允许 MP3/M4A
+- 底部播放器：播放/暂停、上一首、下一首、进度拖拽
+- 本地记录：最近播放歌曲与断点恢复（仅同一首恢复）
 
-> v2.0 版已发布，相较于 v1.0 版本进行了大量改动和优化，但 beta 版本可能存在潜在不稳定性，若您追求稳定，可选择暂缓更新。
->
-> 由于**构建命令发生了变化**，此次更新需要您**手动进行**，请按照以下步骤进行操作：
->
-> - 同步fork的仓库至最新版（若已自动同步可忽略）
->
-> - 前往 pages 管理页面，进入`设置`->`构建`，编辑`构建配置`，在`构建命令`处填写`npm install`
->
-> - 新版本所有设置项已**迁移至 管理端->系统设置 界面**，原则上无需再通过环境变量的方式进行设置，通过系统设置界面进行的设置将**覆盖掉**环境变量中的设置，但为了保证 **Telegram渠道的图片** 能够与旧版本相兼容，**若您之前设置了 Telegram 渠道相关的环境变量，请将其保留！**
->
-> - 确保上述设置完成无误后，前往 pages 管理页面，进入`部署`，对最后一次不成功的部署进行`重试操作`
+### 2.2 后端 API（Music 域）
 
-## 关于切换到 Telegram 渠道的通知
+- `GET /api/music/list`
+  - 鉴权
+  - 仅返回音频文件
+  - 支持搜索/分页/排序
+- `POST /api/music/upload`
+  - 鉴权
+  - 音频类型校验（MP3/M4A）
+  - 复用既有 `/upload` 上传到 Telegram
+- `GET /api/music/stream/:id`
+  - 鉴权
+  - 代理 `/file/:id`
+  - 透传 `Range` 请求，支持流式播放
 
+### 2.3 Telegram 扩展接口
 
-> 由于telegraph图床被滥用，该项目上传渠道已切换至Telegram Channel，请**更新至最新版（更新方式见第3.1章最后一节）**，按照文档中的部署要求**设置`TG_BOT_TOKEN`和`TG_CHAT_ID`**，否则将无法正常使用上传功能。
->
-> 此外，目前**KV数据库为必须配置**，如果以前未配置请按照文档说明配置。
->
-> 出现问题，请先查看第5节常见问题Q&A部分。
+- `POST /api/telegram/media-group-upload`
+  - 支持 Telegram 媒体组批量上传（2~10）
+  - 支持幂等 `requestId`
+  - 结果写入 metadata 并返回可访问地址
 
-</details>
+---
 
+## 3. 目录结构（核心）
 
+```txt
+.
+├── index.html                          # 根入口，跳转 /music/
+├── music/
+│   ├── index.html                      # 音乐播放器页面
+│   ├── app.js                          # 前端交互逻辑
+│   └── style.css                       # 页面样式
+├── functions/
+│   ├── api/music/
+│   │   ├── list.js                     # 音乐列表 API
+│   │   ├── upload.js                   # 音乐上传 API
+│   │   └── stream/[[id]].js            # 音乐流式代理 API
+│   ├── api/telegram/media-group-upload.js
+│   ├── upload/index.js                 # 既有上传主链路（被复用）
+│   └── file/[[path]].js                # 既有文件读取链路（被复用）
+└── docs/telegram-mp3-product-design.md # 产品设计文档
+```
 
+---
 
-# 1. Introduction
+## 4. 运行与开发
 
-免费文件托管解决方案，具有**上传**、**管理**、**读取**、**删除**等全链路功能，覆盖文件全生命周期，支持**鉴权**、**目录**、**图片审查**、**随机图**等各项特性（详见[功能文档](https://cfbed.sanyue.de/guide/features.html)）。
+### 4.1 本地开发
 
-![CloudFlare](static/readme/海报.png)
+```bash
+npm install
+npm start
+```
 
-# 2. [Document](https://cfbed.sanyue.de)
+默认本地地址：
 
-提供详细的部署文档、功能文档、开发计划、更新日志、常见问题解答等，帮助您快速上手。
+- `http://localhost:8080`
 
-[![更新日志](https://recent-update.cfbed.sanyue.de/cn)](https://cfbed.sanyue.de/guide/update-log.html)
+`npm start` 使用 `wrangler pages dev`，并绑定：
 
-# 3. Demo
+- KV: `img_url`
+- R2: `img_r2`
 
-**演示站点**：[CloudFlare ImgBed](https://cfbed.1314883.xyz/) 访问密码：`cfbed`
+> 说明：测试命令 `npm test` 依赖本地 mocha 环境，若你当前依赖目录异常，可能会失败。
 
-![image-20250313204101984](static/readme/login.png)
+### 4.2 生产部署（Cloudflare Pages Functions）
 
-![image-20250313204101984](static/readme/upload.png)
+可沿用原项目部署方式，核心是保证：
 
-<details>
-    <summary>其他页面效果展示</summary>
+1. Functions 正常启用
+2. 数据库绑定可用（KV 或 D1）
+3. Telegram 上传渠道可用
 
-![image-20250313204138886](static/readme/uploading.png)
+---
 
-![image-20250313204308225](static/readme/dashboard.png)
+## 5. 配置说明（最小必需）
 
-![image-20250314152355339](static/readme/customer-config.png)
+## 5.1 Telegram 上传渠道
 
-![status-page](static/readme/status-page.png)
+至少需要一组 Telegram 渠道配置：
 
-![public-gallery](static/readme/public-gallery.png)
+- `botToken`
+- `chatId`
+- `proxyUrl`（可选）
 
+可通过以下方式提供：
 
+1. 环境变量（例如 `TG_BOT_TOKEN`、`TG_CHAT_ID`）
+2. 管理接口系统配置（写入 `manage@sysConfig@upload`）
 
-</details>
+## 5.2 访问认证
 
-# 4. Tips
+用户访问码（`authCode`）用于前端与 API 鉴权。
 
-- **前端开源**：参见[MarSeventh/Sanyue-ImgHub](https://github.com/MarSeventh/Sanyue-ImgHub)项目。
+来源优先级遵循现有实现：
 
-- **生态建设**：欢迎社区参与生态建设，欢迎提交 PR 或者 Issue，优质内容参见[官网生态建设页面](https://cfbed.sanyue.de/about/ecosystem.html)。
+- 系统配置 `manage@sysConfig@security`
+- 环境变量（如 `AUTH_CODE`）
 
-- **赞助**：项目维护不易，喜欢本项目的话，可以作者大大一点小小的鼓励哦，您的每一份支持都是我前进的动力\~ 
+前端 `/music/` 页面会在请求 `api/music/*` 时附带 `authCode`。
 
-  <a href="https://afdian.com/a/marseventh"><img width="200" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.png" alt=""></a>
-  
-- **Sponsors**：感谢以下赞助者对本项目的支持！
+## 5.3 数据库
 
-  [![赞助者](https://afdian-sponsors.sanyue.de/image?columns=12)](https://afdian.com/a/marseventh)
-  
-- **Contributors**：感谢以下贡献者对本项目的无私贡献！
+项目支持：
 
-  [![Contributors](https://contrib.rocks/image?repo=Marseventh/Cloudflare-ImgBed)](https://github.com/MarSeventh/CloudFlare-ImgBed/graphs/contributors)
+- KV（`env.img_url`）
+- D1（`env.img_d1`）
 
-# 5. Star History
+运行时会自动选择可用适配器。
 
-**如果觉得项目不错希望您能给个免费的star✨✨✨，非常感谢！**
+---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=MarSeventh/CloudFlare-ImgBed,MarSeventh/Sanyue-ImgHub&type=Date)](https://star-history.com/#MarSeventh/CloudFlare-ImgBed&MarSeventh/Sanyue-ImgHub&Date)
+## 6. API 快速参考
 
-# 6. Special Sponsors
+### `GET /api/music/list`
 
-- **[CloudFlare](https://www.cloudflare.com) & [EdgeOne](https://edgeone.ai/?from=github)**：提供CDN加速和安全保护服务
+Query 参数（可选）：
 
-  <a href="https://www.cloudflare.com"><img src="static/readme/cloudflare-logo.png" alt="Cloudflare Logo" height="25"></a> <a href="https://edgeone.ai/?from=github"><img src="https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png" alt="Tencent Logo" height="25"></a>
+- `authCode`
+- `q` / `search`
+- `start`（默认 0）
+- `count`（默认 50，最大 200）
+- `sort`（`timeDesc|timeAsc|nameAsc|nameDesc|sizeAsc|sizeDesc`）
+- `dir`
+- `recursive=true|false`
 
-- **[速维云](https://www.svyun.com/recommend/AELZ0UeMz8K11Zg7pEXC)**：提供云计算服务资源支持
+### `POST /api/music/upload`
+
+请求：`multipart/form-data`
+
+- `file`（必须，MP3/M4A）
+
+Query 参数（可选）：
+
+- `authCode`
+- `channelName`
+- `dir`
+
+### `GET /api/music/stream/:id`
+
+- 支持 `Range`
+- 可带 `authCode`
+
+---
+
+## 7. 已知限制
+
+1. 前端当前是 MVP 页面，暂无歌单、歌词、封面提取等能力。
+2. 上传接口当前仅开放 MP3/M4A，其他格式暂不支持。
+3. 列表默认最大拉取 200 条，后续可改为分页滚动加载。
+
+---
+
+## 8. 后续规划
+
+- 歌单系统（创建/排序/收藏）
+- ID3 元数据解析（标题/歌手/专辑/封面）
+- 更细粒度错误提示与可观测性
+- 移动端交互优化
+
+---
+
+## 9. 相关文档
+
+- 产品设计：`docs/telegram-mp3-product-design.md`
+- API 文档：`docs/api.md`
 

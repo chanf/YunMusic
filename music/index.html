@@ -19,6 +19,7 @@
         <input id="authCodeInput" type="password" placeholder="输入访问码 authCode">
         <button id="loginButton" type="button">登录</button>
         <button id="logoutButton" type="button" class="ghost">退出</button>
+        <span id="authStateText" class="auth-state">未登录</span>
       </div>
     </header>
 
@@ -42,6 +43,11 @@
     <section class="library">
       <ul id="trackList" class="track-list"></ul>
       <div id="emptyState" class="empty hidden">暂无歌曲，请先上传。</div>
+    </section>
+
+    <section class="pagination">
+      <button id="loadMoreButton" type="button" class="ghost hidden">加载更多</button>
+      <span id="pageInfoText" class="page-info">未加载</span>
     </section>
   </div>
 
@@ -69,4 +75,3 @@
   <script type="module" src="./app.js"></script>
 </body>
 </html>
-

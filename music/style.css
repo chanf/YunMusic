@@ -52,6 +52,20 @@ h1 {
   gap: 8px;
 }
 
+.auth-state {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.auth-state.ok {
+  color: #55c27b;
+}
+
+.auth-state.error {
+  color: var(--danger);
+}
+
 input[type="text"],
 input[type="password"],
 select,
@@ -196,6 +210,19 @@ button.ghost:hover {
   display: none !important;
 }
 
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.page-info {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .player-panel {
   position: fixed;
   left: 0;
@@ -256,4 +283,3 @@ button.ghost:hover {
     justify-content: flex-start;
   }
 }
-

@@ -11,12 +11,18 @@ const state = {
   tracks: [],
   currentIndex: -1,
   isLoading: false,
+  start: 0,
+  count: 50,
+  totalCount: 0,
+  lastSearch: "",
+  lastSort: "timeDesc",
 };
 
 const dom = {
   authCodeInput: document.getElementById("authCodeInput"),
   loginButton: document.getElementById("loginButton"),
   logoutButton: document.getElementById("logoutButton"),
+  authStateText: document.getElementById("authStateText"),
   searchInput: document.getElementById("searchInput"),
   sortSelect: document.getElementById("sortSelect"),
   refreshButton: document.getElementById("refreshButton"),
@@ -24,6 +30,8 @@ const dom = {
   statusText: document.getElementById("statusText"),
   trackList: document.getElementById("trackList"),
   emptyState: document.getElementById("emptyState"),
+  loadMoreButton: document.getElementById("loadMoreButton"),
+  pageInfoText: document.getElementById("pageInfoText"),
   nowPlayingTitle: document.getElementById("nowPlayingTitle"),
   nowPlayingSub: document.getElementById("nowPlayingSub"),
   prevButton: document.getElementById("prevButton"),
@@ -38,6 +46,43 @@ const dom = {
 function setStatus(message, isError = false) {
   dom.statusText.textContent = message;
   dom.statusText.classList.toggle("error", isError);
+}
+
+function setAuthState(status, text) {
+  dom.authStateText.textContent = text;
+  dom.authStateText.classList.remove("ok", "error");
+  if (status === "ok") {
+    dom.authStateText.classList.add("ok");
+  }
+  if (status === "error") {
+    dom.authStateText.classList.add("error");
+  }
+}
+
+function updateAuthControls() {
+  const isLoggedIn = Boolean(state.authCode);
+  dom.loginButton.textContent = isLoggedIn ? "重新登录" : "登录";
+  dom.logoutButton.disabled = !isLoggedIn;
+
+  if (isLoggedIn) {
+    setAuthState("ok", "已登录");
+  } else {
+    setAuthState("default", "未登录");
+  }
+}
+
+function updatePageInfo() {
+  if (state.totalCount <= 0) {
+    dom.pageInfoText.textContent = "未加载";
+    dom.loadMoreButton.classList.add("hidden");
+    return;
+  }
+
+  const loadedCount = state.tracks.length;
+  dom.pageInfoText.textContent = `已加载 ${loadedCount} / ${state.totalCount}`;
+  const hasMore = loadedCount < state.totalCount;
+  dom.loadMoreButton.classList.toggle("hidden", !hasMore);
+  dom.loadMoreButton.disabled = state.isLoading;
 }
 
 function formatTime(seconds) {
@@ -92,6 +137,7 @@ function renderTracks() {
 
   if (state.tracks.length === 0) {
     dom.emptyState.classList.remove("hidden");
+    updatePageInfo();
     return;
   }
 
@@ -134,6 +180,7 @@ function renderTracks() {
   });
 
   dom.trackList.append(fragment);
+  updatePageInfo();
 }
 
 function getAuthParams() {
@@ -170,7 +217,13 @@ function updateNowPlayingMeta() {
   dom.nowPlayingSub.textContent = current.artist || current.fileName || current.id;
 }
 
-async function loadTracks({ silent = false } = {}) {
+function resetPagination() {
+  state.start = 0;
+  state.totalCount = 0;
+  state.tracks = [];
+}
+
+async function loadTracks({ silent = false, append = false } = {}) {
   if (state.isLoading) {
     return;
   }
@@ -180,30 +233,56 @@ async function loadTracks({ silent = false } = {}) {
   }
 
   state.isLoading = true;
+  updatePageInfo();
   try {
+    if (!append) {
+      state.lastSearch = dom.searchInput.value.trim();
+      state.lastSort = dom.sortSelect.value;
+      resetPagination();
+    }
+
     const params = {
-      q: dom.searchInput.value.trim(),
-      sort: dom.sortSelect.value,
-      count: 200,
+      q: state.lastSearch,
+      sort: state.lastSort,
+      start: state.start,
+      count: state.count,
       ...getAuthParams(),
     };
 
     const apiUrl = toApiUrl("/api/music/list", params);
     const data = await requestJson(apiUrl.toString());
-    state.tracks = Array.isArray(data.tracks) ? data.tracks : [];
+    const incomingTracks = Array.isArray(data.tracks) ? data.tracks : [];
+    if (append) {
+      state.tracks = [...state.tracks, ...incomingTracks];
+    } else {
+      state.tracks = incomingTracks;
+    }
+    state.totalCount = Number.isFinite(Number(data.totalCount)) ? Number(data.totalCount) : state.tracks.length;
+    state.start = state.tracks.length;
+
     persistQueue();
-    restoreSelectedTrack();
+    if (!append) {
+      restoreSelectedTrack();
+    }
     renderTracks();
 
     if (state.tracks.length === 0) {
       setStatus("音乐库为空，先上传一首歌试试。", false);
     } else {
-      setStatus(`已加载 ${state.tracks.length} 首歌曲。`, false);
+      setStatus(`已加载 ${state.tracks.length} 首歌曲（共 ${state.totalCount}）。`, false);
     }
+
+    setAuthState("ok", "已登录");
   } catch (error) {
-    setStatus(`加载失败：${error.message}`, true);
+    if (error.message.toLowerCase().includes("unauthorized")) {
+      setStatus("未授权：请检查 authCode 后重新登录。", true);
+      setAuthState("error", "登录失效");
+    } else {
+      setStatus(`加载失败：${error.message}`, true);
+    }
   } finally {
     state.isLoading = false;
+    updatePageInfo();
   }
 }
 
@@ -257,6 +336,12 @@ function playPrev() {
 }
 
 async function uploadSelectedFile() {
+  if (!state.authCode) {
+    setStatus("请先登录再上传文件。", true);
+    setAuthState("error", "未登录");
+    return;
+  }
+
   const file = dom.uploadInput.files?.[0];
   if (!file) {
     return;
@@ -274,11 +359,27 @@ async function uploadSelectedFile() {
       body: formData,
     });
     setStatus(`上传成功：${file.name}`);
+    setAuthState("ok", "已登录");
     dom.uploadInput.value = "";
     await loadTracks({ silent: true });
   } catch (error) {
-    setStatus(`上传失败：${error.message}`, true);
+    if (error.message.toLowerCase().includes("unauthorized")) {
+      setStatus("上传失败：未授权，请重新登录。", true);
+      setAuthState("error", "登录失效");
+    } else {
+      setStatus(`上传失败：${error.message}`, true);
+    }
   }
+}
+
+async function loadMoreTracks() {
+  if (state.isLoading) {
+    return;
+  }
+  if (state.tracks.length >= state.totalCount && state.totalCount > 0) {
+    return;
+  }
+  await loadTracks({ silent: true, append: true });
 }
 
 function bindEvents() {
@@ -290,6 +391,7 @@ function bindEvents() {
     } else {
       localStorage.removeItem(storageKeys.authCode);
     }
+    updateAuthControls();
     await loadTracks();
   });
 
@@ -297,6 +399,13 @@ function bindEvents() {
     state.authCode = "";
     dom.authCodeInput.value = "";
     localStorage.removeItem(storageKeys.authCode);
+    resetPagination();
+    state.currentIndex = -1;
+    state.tracks = [];
+    renderTracks();
+    updateNowPlayingMeta();
+    updateAuthControls();
+    setAuthState("default", "未登录");
     setStatus("已退出，本地访问码已清除。", false);
   });
 
@@ -311,7 +420,11 @@ function bindEvents() {
   });
 
   dom.sortSelect.addEventListener("change", () => {
-    void loadTracks({ silent: true });
+    void loadTracks();
+  });
+
+  dom.loadMoreButton.addEventListener("click", () => {
+    void loadMoreTracks();
   });
 
   dom.uploadInput.addEventListener("change", () => {
@@ -389,9 +502,14 @@ function bindEvents() {
 
 function bootstrap() {
   dom.authCodeInput.value = state.authCode;
+  dom.sortSelect.value = state.lastSort;
+  updateAuthControls();
+  updatePageInfo();
   bindEvents();
   if (state.authCode) {
     void loadTracks();
+  } else {
+    setStatus("请先输入 authCode 登录后加载音乐库。", false);
   }
 }
 
