@@ -98,8 +98,8 @@ npm start
 
 `npm start` 使用 `wrangler pages dev`，并绑定：
 
-- KV: `img_url`
-- R2: `img_r2`
+- KV: `yun_music`
+- R2: `yun_r2`
 
 > 说明：测试命令 `npm test` 依赖本地 mocha 环境，若你当前依赖目录异常，可能会失败。
 
@@ -130,10 +130,10 @@ npm start
 进入 Pages 项目：**Settings** -> **Bindings**，按需添加：
 
 1. **KV Namespace**
-   - Variable name：`img_url`
+   - Variable name：`yun_music`
    - 绑定你的 KV 命名空间（用于文件索引与元数据）
 2. **R2 Bucket**
-   - Variable name：`img_r2`
+   - Variable name：`yun_r2`
    - 绑定你的 R2 Bucket（本项目本地脚本默认也使用该命名）
 
 建议在 **Preview** 和 **Production** 两个环境都配置对应绑定。
@@ -163,7 +163,7 @@ npm start
 2. 输入 `authCode` 后可加载音乐列表（`GET /api/music/list` 返回 200）。
 3. 上传一首 MP3/M4A 成功（`POST /api/music/upload` 返回 200）。
 4. 点击歌曲可播放并可拖动进度（`GET /api/music/stream/:id` 出现 206/Range）。
-5. 若失败，先检查：Bindings 命名是否正确（`img_url`、`img_r2`）与 Telegram 变量是否匹配。
+5. 若失败，先检查：Bindings 命名是否正确（`yun_music`、`yun_r2`）与 Telegram 变量是否匹配。
 
 ---
 
@@ -197,7 +197,7 @@ npm start
 
 项目支持：
 
-- KV（`env.img_url`）
+- KV（`env.yun_music`）
 - D1（`env.img_d1`）
 
 运行时会自动选择可用适配器。
