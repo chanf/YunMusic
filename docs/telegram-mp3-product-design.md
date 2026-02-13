@@ -43,7 +43,7 @@
 - 通用文件管理高级功能（批量改名、批量移动、复杂标签体系）
 - 与“图床”定位相关的展示页面和术语
 
-> 原则：不删除底层可复用代码，先通过路由与页面裁剪实现产品层简化，降低回归风险。
+> 原则：优先保留音乐主链路必要代码，遗留模块按“无引用+无业务价值”规则删除。
 
 ## 4. Telegram 约束与设计依据（官方 Bot API）
 
@@ -107,7 +107,6 @@
 - 上传入口：`functions/upload/index.js`
 - Telegram 能力封装：`functions/utils/telegramAPI.js`
 - 文件读取（含 Range）：`functions/file/[[path]].js`
-- 公共文件列表：`functions/api/public/list.js`
 - 分片上传与合并：`functions/upload/chunkUpload.js`、`functions/upload/chunkMerge.js`
 
 ### 7.2 需要新增/调整
