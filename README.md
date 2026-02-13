@@ -111,6 +111,60 @@ npm start
 2. 数据库绑定可用（KV 或 D1）
 3. Telegram 上传渠道可用
 
+### 4.3 Cloudflare Pages 部署细节（推荐）
+
+下面给出一套可直接落地的配置流程（Git 集成部署）：
+
+1. 在 Cloudflare Dashboard 打开 **Workers & Pages**，创建/选择你的 Pages 项目。
+2. 连接本仓库并选择默认分支（通常是 `main`）。
+3. 在 **Build** 配置中建议使用：
+   - **Build command**：`npm install`
+   - **Build output directory**：`.`（项目根目录）
+   - **Root directory**：留空（仓库根目录部署）
+4. 项目中 `functions/` 目录会被 Pages Functions 自动识别，无需额外改动。
+
+> 说明：Cloudflare 官方文档允许“无框架项目不填写 build command”，但本项目包含 Functions 依赖，建议保留 `npm install` 以确保依赖解析稳定。
+
+### 4.4 Bindings 配置（重点）
+
+进入 Pages 项目：**Settings** -> **Bindings**，按需添加：
+
+1. **KV Namespace**
+   - Variable name：`img_url`
+   - 绑定你的 KV 命名空间（用于文件索引与元数据）
+2. **R2 Bucket**
+   - Variable name：`img_r2`
+   - 绑定你的 R2 Bucket（本项目本地脚本默认也使用该命名）
+
+建议在 **Preview** 和 **Production** 两个环境都配置对应绑定。
+
+> 官方文档建议：绑定调整后重新部署一次，让新绑定在当前部署中生效。
+
+### 4.5 环境变量建议（Preview / Production 分开）
+
+进入 Pages 项目：**Settings** -> **Variables and Secrets**（或 Environment Variables），建议分别配置：
+
+- `TG_BOT_TOKEN`（必需，Telegram Bot Token）
+- `TG_CHAT_ID`（必需，目标频道/会话 ID）
+- `TG_PROXY_URL`（可选，Telegram 代理域名）
+- `AUTH_CODE`（建议配置，用于前端/API 访问码）
+
+建议策略：
+
+1. **Preview** 使用测试 Bot 与测试频道。
+2. **Production** 使用正式 Bot 与正式频道。
+3. 变量修改后触发一次新部署再验证。
+
+### 4.6 部署后自检清单
+
+部署完成后，建议按顺序验证：
+
+1. 打开 `/music/` 页面可以正常访问。
+2. 输入 `authCode` 后可加载音乐列表（`GET /api/music/list` 返回 200）。
+3. 上传一首 MP3/M4A 成功（`POST /api/music/upload` 返回 200）。
+4. 点击歌曲可播放并可拖动进度（`GET /api/music/stream/:id` 出现 206/Range）。
+5. 若失败，先检查：Bindings 命名是否正确（`img_url`、`img_r2`）与 Telegram 变量是否匹配。
+
 ---
 
 ## 5. 配置说明（最小必需）
